@@ -1,0 +1,2 @@
+(ns munge.io.graph-adj
+  (require [loom.graph :as lg]))

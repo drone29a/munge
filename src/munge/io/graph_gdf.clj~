@@ -1,0 +1,34 @@
+(ns munge.io.graph-gdf
+  (:require [loom.graph :as lg]
+            [schema.core :as sc]
+            [schema.macros :as sm]
+            [clojure.java.io :as io])
+  (:import [java.io.File]))
+
+(defn serialize-vertex [v]
+  (format "%s,%s,%s,\"%s\"" (:name v) (:size v) (:class v) (:desc v)))
+
+(defn serialize-edge [e]
+  (format "%s,%s,%s,%s" (:src e) (:dst e) (:class e) (:weight e)))
+
+(defn read-gdf [lines]
+  )
+
+(defn write-gdf
+  [ser-v ser-e w vs es]
+  (.write w "nodedef> name,size INT,class,desc\n")
+  (doseq [v vs]
+    (.write w (format "%s\n" (ser-v v))))
+  (.write w "edgedef> node1,node2,class,weight INT\n")
+  (doseq [e es]
+    (.write w (format "%s\n" (ser-e e)))))
+
+(defn load-gdf
+  [path]
+  )
+
+(sm/defn save-gdf
+  [g :- sc/Any
+   path :- java.io.File]
+  (with-open [w (io/writer path)]
+    (write-gdf serialize-vertex serialize-edge w (:nodes g) (:edges g))))
