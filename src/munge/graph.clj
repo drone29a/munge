@@ -1,27 +1,26 @@
 (ns munge.graph
-  (:require [schema.core :as sc]
-            [schema.macros :as sm]
+  (:require [schema.core :as s]
             [loom.graph :as lg]
             [loom.alg :as la]
             [munge.core :refer [update-for-keys Matrix Graph WeightedGraph]]
             [clojure.core.matrix :refer [zero-matrix sparse-matrix mset!] :as mx]))
 
 ;; TODO: Fix the need for selected-nodes?
-(sm/defn selected-path-distances :- {sc/Any {sc/Any sc/Int}}
+(s/defn selected-path-distances :- {s/Any {s/Any s/Int}}
   "The max depth is inclusive."
   [g :- Graph
-   selected-nodes :- #{sc/Any}
-   selector :- (sc/=> sc/Bool sc/Any sc/Int)
-   result :- (sc/=> sc/Any sc/Any sc/Int)
-   max-depth :- sc/Int]
+   selected-nodes :- #{s/Any}
+   selector :- (s/=> s/Bool s/Any s/Int)
+   result :- (s/=> s/Any s/Any s/Int)
+   max-depth :- s/Int]
   (letfn [(f [node pred-map depth]
             (if (selector node depth)
               (result node depth)
               nil))
           (whn [neighbor pred depth]
             (<= depth max-depth))]
-    (->> (reduce (sm/fn [paths :- {sc/Any {sc/Any sc/Int}}
-                         n :- sc/Any]
+    (->> (reduce (s/fn [paths :- {s/Any {s/Any s/Int}}
+                         n :- s/Any]
                    (->> (la/bf-traverse g n :f f :when whn)
                         (into {})
                         (assoc paths n)))
@@ -29,7 +28,7 @@
                  selected-nodes)
          (into {}))))
 
-(sm/defn membership-graph :- WeightedGraph
+(s/defn membership-graph :- WeightedGraph
   "Create an membership graph given an undirected graph
   and a map of communities to members. A community graph is
   a complete graph with weighted edges where communities are nodes,  
@@ -61,8 +60,8 @@
 
   Note that community names must not conflict with original node names."
   [g :- Graph
-   comms :- {sc/Str #{sc/Any}}
-   max-depth :- sc/Int]
+   comms :- {(s/either s/Str s/Keyword) #{s/Any}}
+   max-depth :- s/Int]
 
   ;; Add comm nodes to graph
   ;; Find shortest paths
@@ -85,7 +84,7 @@
         (lg/add-nodes* comm-keys)
         (lg/add-edges* comm-es))))
 
-(sm/defn coincident-edges :- {sc/Any {sc/Any sc/Int}}
+(s/defn coincident-edges :- {s/Any {s/Any s/Int}}
   "Create a edges from a collection of sets of 
   vertices. Vertices are linked if they are both members of at least one
   common set. Edge weight indicates the number of common sets between
@@ -105,7 +104,7 @@
                       rindex)]
     edges))
 
-(sm/defn coincident-graph :- WeightedGraph
+(s/defn coincident-graph :- WeightedGraph
   "Create a graph from a collection of sets of 
   vertices. Vertices are linked if they are both members of at least one
   common set. Edge weight indicates the number of common sets between
@@ -113,10 +112,10 @@
   [ss :- [java.util.Set]]
   (lg/weighted-graph (coincident-edges ss)))
 
-(sm/defn adj-matrix :- Matrix
+(s/defn adj-matrix :- Matrix
   "Create an adjacency matrix for the graph."
   [g :- Graph
-   node-index :- {sc/Any sc/Int}]
+   node-index :- {s/Any s/Int}]
   (let [num-nodes (count (lg/nodes g))
         m (-> (zero-matrix num-nodes num-nodes) sparse-matrix mx/mutable)
         weight (if (lg/weighted? g) (lg/weight g) (constantly 1))]

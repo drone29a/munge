@@ -5,7 +5,7 @@
             [schema.test]
             [loom.graph :as lg]
             [loom.alg :as la]))
-;;(use-fixtures :once schema.test/validate-schemas)
+(use-fixtures :once schema.test/validate-schemas)
 
 ;; Graph with 3 maximal cliques: #{:a :b :c} #{:b :d :e} #{:e :f}
 (def wg1 (lg/weighted-graph [:a :b 1]
@@ -44,7 +44,7 @@
                              [:comm-0 :c 2]
                              [:comm-0 :a 2]
                              [:comm-0 :f 2]))
-           (membership-graph wg1 comms)))))
+           (membership-graph wg1 comms 4)))))
 
 (deftest coincident-edges-test
   (let [ss [#{:a :b} #{:a :b :c} #{:b :c :d}]]
