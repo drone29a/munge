@@ -24,14 +24,6 @@
 (sm/defn read-data-line :- [sc/Str]
   [separator :- Character
    line :- sc/Str]
-  ;; A template for matching tokens in a record.
-  ;; Substitute # for actual separator used.
-  (comment  (let [pattern-template "([^\"#]+|\".*\"||\"\")[#\\newline]"
-                  p (-> (clojure.string/replace pattern-template #"#" separator)
-                        (re-pattern))]
-              ;; TODO: Update regex to support lines with \n stripped.
-              (map second (re-seq p (str line "\n")))))
-
   (first (csv/read-csv line :separator separator)))
 
 ;; TODO: not resilient to multiple line records
@@ -41,39 +33,30 @@
    header? :- sc/Bool
    col-names :- [(sc/either sc/Str sc/Keyword)]
    row-schema :- sc/Schema
-   lines :- [sc/Str]]  
-  (let [data (for [l lines] (read-data-line separator l))
-        ;;data (for [l lines] (split l (re-pattern separator)))
+   rdr :- java.io.Reader]  
+  (let [data (csv/read-csv rdr :separator separator)
+        ;;data (for [l lines] (read-data-line separator l))
         num-cols (-> data first count)
         default-col-names (vec (for [i (range num-cols)] (format "col-%d" i)))
         ;; Schema must not be a lazy-seq
         unquoted-row-schema (vec (for [c-name default-col-names] (sc/one UnquotedStr c-name)))
         col-names (or col-names default-col-names)
         row-schema (or row-schema unquoted-row-schema)
-        parse-rows (s.coerce/coercer [row-schema] +row-coercions+)
+        parse-row (s.coerce/coercer row-schema +row-coercions+)
         header (vec (map keyword (if header?
                                    ((s.coerce/coercer unquoted-row-schema +unquoted-coercion+) (first data))
                                    col-names)))
         rows (if header? (rest data) data)]
-    (comment
-      (->> rows
-           (parse-rows)
-           (map #(->> %
-                      (vec)
-                      (interleave header)
-                      (apply assoc {})))
-           (vec)))
     (->> rows
-         (parse-rows)
-         (map vec)
+         (map (comp vec parse-row))
          (vec))))
 
 ;; TODO: move to csv lib?
 (defn write-data-frame [w headers records separator]
   (when headers
-    (.write w (format "%s\n" (join separator headers))))
+    (.write w (format "%s\n" (->> headers (map (partial format "\"%s\"")) (join separator)))))
   (doseq [r records]
-    (.write w (format "%s\n" (join separator r)))))
+    (.write w (format "%s\n" (->> r (map (partial format "\"%s\"")) (join separator))))))
 
 ;; returns [(sc/either {sc/Keyword sc/Str} [sc/Str])]
 (defn load-data-frame
@@ -89,7 +72,7 @@
                 col-names nil
                 row-schema nil}}] 
   (with-open [r (io/reader path)]
-    (read-data-frame separator header? col-names row-schema (line-seq r))))
+    (read-data-frame separator header? col-names row-schema r)))
 
 (defn save-data-frame [path headers records separator]
   (with-open [w (io/writer path)]
