@@ -61,7 +61,7 @@
 
   Note that community names must not conflict with original node names."
   [g :- Graph
-   comms :- {sc/Keyword #{sc/Any}}
+   comms :- {sc/Str #{sc/Any}}
    max-depth :- sc/Int]
 
   ;; Add comm nodes to graph
@@ -82,6 +82,7 @@
                  [v d] (get path-results u)]
                   [u v d])]
     (-> (lg/weighted-graph)
+        (lg/add-nodes* comm-keys)
         (lg/add-edges* comm-es))))
 
 (sm/defn coincident-edges :- {sc/Any {sc/Any sc/Int}}
