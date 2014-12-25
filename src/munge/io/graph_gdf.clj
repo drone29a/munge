@@ -39,19 +39,13 @@
                            (sc/one sc/Str "node2")
                            (sc/one sc/Int "weight")])
 
-(defn serialize-vertex [v]
-  (format "%s,%s,%s,\"%s\"" (:name v) (:size v) (:class v) (:desc v)))
-
-(defn serialize-edge [e]
-  (format "%s,%s,%s,%s" (:src e) (:dst e) (:class e) (:weight e)))
-
 (sm/defn serialize-node :- sc/Str
   [node-schema :- sc/Schema
    get-name :- (sc/=> sc/Str Node)
    g :- Graph
    n :- Node]
   (let [n-props (merge (lattr/attrs g n)
-                       n
+                       (if (map? n) n nil)
                        {:name (get-name n)})]
     (join "," (for [field (concat required-node-fields node-schema)
                     :let [k (-> (:name field) keyword)
