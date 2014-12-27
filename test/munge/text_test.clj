@@ -5,6 +5,31 @@
 
 (use-fixtures :once schema.test/validate-schemas)
 
+(defprotocol Close
+  (close? [this other delta]
+    "Check if two items of same type are numerically similar
+    within some delta value."))
+(extend-protocol Close
+  java.lang.Number
+  (close? [this other delta]
+    (<= (Math/abs (- this other))
+        delta))
+  java.util.Map
+  (close? [this other delta]
+    (let [ks (keys this)]
+      (and (= (set ks) (set (keys other)))
+           (->> ks
+                (map (fn [k]
+                       (close? (get this k)
+                               (get other k)
+                               delta)))
+                (every? true?)))))
+  clojure.lang.Sequential
+  (close? [this other delta]
+    (every? (fn [[x y]]
+              (close? x y delta))
+            (map vector this other))))
+
 (deftest tokenization-test
   (testing "basic whitespace tokenization"
     (is (= ["These" "are," "42" "tokens." "not_really"]
@@ -24,3 +49,34 @@
   (testing "removing trailing non-alphanum characters"
     (is (= ["foo" "123"]
            (map clean-trailing ["foo..." "123;"])))))
+
+(deftest extract-test
+  (testing "extracting terms from a text string"
+    (is (= ["brown" "fox" "wait" "number"]
+           (extract-terms "The brown fox... wait, what? 123 - numbers?!")))))
+
+(deftest frequency-test
+  (testing "term frequencyn"
+    (is (= {"a" 1 "b" 3 "ccc" 2}
+           (tf ["ccc" "a" "b" "ccc" "b" "b"]))))
+  (testing "term-document frequency"
+    (is (= {"foo" 2 "bar" 1 "baz" 3}
+           (tdf [{"foo" 1 "bar" 1 "baz" 1}
+                 {"foo" 1 "baz" 1}
+                 {"baz" 1}]))))
+  (testing "inverse document frequency"
+    (is (close? {"foo" 0.405
+                 "bar" 1.098
+                 "baz" 0}
+                (idf [{"foo" 1 "bar" 1 "baz" 1}
+                      {"foo" 1 "baz" 1}
+                      {"baz" 1}])
+                0.001)))
+  (testing "term frequency-inverse document frequency"
+    (is (close? [{"foo" 1.216 "bar" 2.197 "baz" 0}
+                 {"foo" 0.405 "baz" 0}
+                 {"baz" 0}]
+                (tf-idf [["foo" "foo" "foo" "bar" "bar" "baz"]
+                         (concat ["foo"] (repeat 10 "baz"))
+                         ["baz"]])
+                0.001))))

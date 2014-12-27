@@ -1,8 +1,11 @@
 (ns munge.text
   (:refer-clojure :exclude [replace])
   (:require [schema.core :as s]
+            [munge.core :as m]
+            [munge.schema :refer [Mat]]
             [stemmers.porter :refer [stem]]
-            [clojure.string :refer [split replace lower-case]]))
+            [clojure.string :refer [split replace lower-case]]
+            [munge.matrix :refer [sparse-matrix]]))
 
 ;; Need functions for:
 ;; tokenization
@@ -56,6 +59,76 @@
        (map lower-case)
        (remove stopword?)
        (map stem)))
+
+(s/defn tf :- {s/Str s/Int}
+  "Calculate term frequency."
+  [terms :- [s/Str]]
+  (reduce (fn [freqs term]
+            (update-in freqs [term] (fnil inc 0)))
+          {}
+          terms))
+
+(s/defn tdf :- {s/Str s/Int}
+  "Finds how many documents each term occurs."
+  [docs :- [{s/Str s/Int}]]
+  (reduce (fn [freqs doc]
+            (loop [fs freqs
+                   terms (keys doc)]
+              (if (empty? terms)
+                fs
+                (recur (update-in fs [(first terms)] (fnil inc 0))
+                       (rest terms)))))
+          {}
+          docs))
+
+(s/defn idf :- {s/Str s/Num}
+  "Calculate the inverse document frequency."
+  [docs :- [{s/Str s/Int}]]
+  (let [term-doc-freq (tdf docs)
+        num-docs (count docs)]
+    (into {} (map (fn [[term freq]]
+                    [term (Math/log (/ num-docs freq))])
+                  term-doc-freq))))
+
+(s/defn tf-idf :- [{s/Str s/Num}]
+  [term-seqs :- [[s/Str]]]
+  (let [docs (map tf term-seqs)
+        inv-doc-freq (idf docs)
+        terms (keys inv-doc-freq)]
+    (map (fn [d]
+           (->> (for [t (keys d)]
+                  [t (* (get d t) (get inv-doc-freq t))])
+                (into {})))
+         docs)))
+
+(s/defn create-doc-term-matrix :- Mat
+  ([doc-terms :- [{s/Str s/Num}]]
+     (create-doc-term-matrix (->> doc-terms
+                                  (mapcat keys)
+                                  set)
+                             doc-terms))
+  ([terms :- #{s/Str}
+    doc-terms :- [{s/Str s/Num}]]
+     (let [num-docs (count doc-terms)
+           num-terms (count terms)
+           term-index (->> terms
+                         sort
+                         (map-indexed (comp vec reverse vector))
+                         (into {}))]
+       (sparse-matrix num-docs
+                      num-terms
+                      (for [dt doc-terms]
+                        (->> dt
+                             (map (partial apply (m/comb term-index identity)))
+                             (into {})))))))
+
+(s/defn process-corpus :- Mat
+  "Generate tf-idf matrix for a set of documents."
+  [docs :- [s/Str]]
+  (->> docs
+       (map extract-terms)
+       (tf-idf)
+       (create-doc-term-matrix)))
 
 ;; From http://www.ranks.nl/stopwords
 (s/def stopwords :- #{s/Str}
