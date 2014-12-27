@@ -2,7 +2,8 @@
   (:require [schema.core :as s]
             [loom.graph :as lg]
             [loom.alg :as la]
-            [munge.core :refer [update-for-keys Matrix Graph WeightedGraph]]
+            [munge.core :refer [update-for-keys]]
+            [munge.schema :refer [Matrix Graph WeightedGraph]]
             [clojure.core.matrix :refer [zero-matrix sparse-matrix mset!] :as mx]))
 
 ;; TODO: Fix the need for selected-nodes?
