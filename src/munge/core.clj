@@ -1,9 +1,5 @@
 (ns munge.core
-  (:require [schema.core :as s]
-            [clojure.core.matrix.protocols :as mp]
-            [clojure.core.matrix :as mx]
-            [munge.schema :refer [Mat Vec]]
-            [loom.graph :as lg]))
+  (:require [schema.core :as s]))
 
 (defn comb [& fns]
   (fn [& args]

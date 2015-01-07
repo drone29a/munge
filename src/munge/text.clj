@@ -15,9 +15,10 @@
 (declare stopwords)
 
 (s/defn tokenize :- [s/Str]
-  "Find word-like tokens in a string by splitting on whitespace."
+  "Find word-like tokens in a string by splitting on whitespace
+  and XML markup."
   [text :- s/Str]
-  (->> (split text #"\s+")))
+  (split text #"\s+"))
 
 (s/defn has-alpha? :- s/Bool
   [token :- s/Str]
@@ -40,22 +41,65 @@
        nil?
        not))
 
-(s/defn clean-trailing :- s/Str
+(s/defn url-like? :- s/Bool
   [token :- s/Str]
-  (replace token #"\W+$" ""))
+  (->> token
+       (re-find #"(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»\“\”‘’]))")
+       nil?
+       not))
+
+(s/defn convert-xml-markup-to-whitespace :- s/Str
+  "Convert some markup to whitespace."
+  [text :- s/Str]
+  (replace text #"\<br\/?\>" " "))
+
+(s/defn strip-xml-markup :- s/Str
+  [text :- s/Str]
+  (replace text #"\<.*?\>" ""))
+
+(s/defn strip-tex-markup :- s/Str
+  [text :- s/Str]
+  ;;(replace text #"\\[\{\}\[\]\(\)\w]+\W?" "")
+  (replace text #"\\\w*(\{[\w\s]*\})?" ""))
+
+(s/defn trim-non-alphanum :- s/Str
+  "Remove leading and trailing non-alphanums and XML markup."
+  [token :- s/Str]
+  ;;(replace token #"^\<.*\>$|\W+$" "")
+  ;; was from clean-leading
+  ;;(replace token #"^\<.*\>|^\W+" "")
+  (replace token #"(\W+$)|(^\W+)" ""))
+
+(s/defn split-punctuation :- [s/Str]
+  [token :- s/Str]
+  ;; TODO: should support multiple punctuation marks? at one point is text garbage...
+  (-> (.replaceAll (re-matcher #"(\w+?)/|-+|\\|\(|\)|\,|\.(\w+?)" token) "$1 $2")
+      (tokenize)))
 
 (s/defn stopword? :- s/Bool
   [token :- s/Str]
   (contains? stopwords token))
 
+(s/defn unhyphenate :- s/Str
+  [token :- s/Str]
+  (.replaceAll (re-matcher #"(\w+?)-(\w+?)" token) "$1$2"))
+
+;; TODO: handle: "level.<br/>techn"
+;; TODO: remove hyphens
 (s/defn extract-terms :- [s/Str]
   [text :- s/Str]
   (->> text
+       convert-xml-markup-to-whitespace
+       strip-xml-markup
+       strip-tex-markup
        tokenize
        (filter has-alpha?)
-       (remove xml-markup?)
-       (remove tex-markup?)
-       (map clean-trailing)
+       (remove url-like?)
+       (map trim-non-alphanum)
+       (map unhyphenate)
+       (mapcat split-punctuation)
+       (filter has-alpha?)
+       (map trim-non-alphanum)
        (map lower-case)
        (remove stopword?)
        (map stem)))
@@ -101,20 +145,27 @@
                 (into {})))
          docs)))
 
+(s/defn create-term-labels :- [s/Str]
+  "Create an ordered collection of distinct terms
+   which are the labels for the doc-term matrix columns."
+  [doc-terms :- [{s/Str s/Num}]]
+  (->> doc-terms
+       (mapcat keys)
+       set
+       sort))
+
+;; TODO: write function to call this and provide name indices for terms and docs
 (s/defn create-doc-term-matrix :- Mat
   ([doc-terms :- [{s/Str s/Num}]]
-     (create-doc-term-matrix (->> doc-terms
-                                  (mapcat keys)
-                                  set)
+     (create-doc-term-matrix (create-term-labels doc-terms)
                              doc-terms))
-  ([terms :- #{s/Str}
+  ([terms :- [s/Str]
     doc-terms :- [{s/Str s/Num}]]
      (let [num-docs (count doc-terms)
            num-terms (count terms)
            term-index (->> terms
-                         sort
-                         (map-indexed (comp vec reverse vector))
-                         (into {}))]
+                           (map-indexed (comp vec reverse vector))
+                           (into {}))]
        (sparse-matrix num-docs
                       num-terms
                       (for [dt doc-terms]

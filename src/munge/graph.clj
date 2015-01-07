@@ -124,3 +124,11 @@
     (doseq [[u v] (lg/edges g)]
       (mset! m (get node-index u) (get node-index v) (weight u v)))
     (mx/immutable m)))
+
+(s/defn largest-connected-component :- Graph
+  [g :- Graph]
+  (lg/subgraph g
+               (->> g
+                    (la/connected-components)
+                    (sort-by count >)
+                    (first))))

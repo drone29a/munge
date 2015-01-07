@@ -2,7 +2,7 @@
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.core.matrix :as mx]
-            [munge.core :refer :all]
+            [munge.schema :refer :all]
             [schema.core :as sc]
             [schema.macros :as sm])
   (:import [mikera.matrixx.impl SparseRowMatrix]))

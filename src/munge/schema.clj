@@ -1,15 +1,23 @@
 (ns munge.schema
   (:require [schema.core :as s]
             [clojure.core.matrix :as mx]
-            [loom.graph :as lg]))
+            [loom.graph :as lg])
+  (:import [mikera.vectorz.impl SparseIndexedVector SparseHashedVector]
+           [mikera.matrixx.impl SparseRowMatrix SparseColumnMatrix]))
 
+;; TODO: core.matrix/vec? should return true, but returns false
 (def Vec
   "Any vector"
-  (s/pred mx/vec? 'vec?))
+  (s/either (s/pred mx/vec? 'vec?)
+            SparseIndexedVector
+            SparseHashedVector))
 
+;; TODO: core.matrix/matrix? should return true, but returns false
 (def Mat
   "Any matrix"
-  (s/pred mx/matrix? 'matrix?))
+  (s/either (s/pred mx/matrix? 'matrix?)
+            SparseRowMatrix
+            SparseColumnMatrix))
 (def Matrix Mat)
 
 (defn prob-vec?

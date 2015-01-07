@@ -26,24 +26,12 @@
              #{:e :f}}
            (set cliques)))
     (is (= (-> (lg/weighted-graph)
-               (lg/add-edges [:comm-1 :b 1]
-                             [:comm-1 :c 1]
-                             [:comm-1 :a 1]
-                             [:comm-1 :e 2]
-                             [:comm-1 :d 2]
-                             [:comm-1 :f 3]
-                             [:comm-2 :e 1]
-                             [:comm-2 :f 1]
-                             [:comm-2 :b 2]
-                             [:comm-2 :d 2]
-                             [:comm-2 :c 3]
-                             [:comm-2 :a 3]
-                             [:comm-0 :e 1]
-                             [:comm-0 :d 1]
-                             [:comm-0 :b 1]
-                             [:comm-0 :c 2]
-                             [:comm-0 :a 2]
-                             [:comm-0 :f 2]))
+               (lg/add-edges [:comm-0 :comm-1 0]
+                             [:comm-0 :comm-2 0]
+                             [:comm-1 :comm-0 0]
+                             [:comm-1 :comm-2 1]
+                             [:comm-2 :comm-0 0]
+                             [:comm-2 :comm-1 1]))
            (membership-graph wg1 comms 4)))))
 
 (deftest coincident-edges-test

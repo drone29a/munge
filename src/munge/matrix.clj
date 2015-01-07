@@ -1,7 +1,7 @@
 (ns munge.matrix
   (:require [clojure.core.matrix :as mx]
             [schema.core :as s]
-            [munge.schema :refer [Mat Vec]])
+            [munge.schema :refer [Mat Vec BinVec ProbVec]])
   (:import [mikera.matrixx.impl SparseRowMatrix SparseColumnMatrix]
            [mikera.vectorz.impl SparseIndexedVector SparseHashedVector]
            [mikera.vectorz.util DoubleArrays]))
@@ -24,12 +24,14 @@
   (SparseIndexedVector/createLength length))
 
 (s/defn create-sparse-hashed-vector :- Vec
-  [length :- s/Int
-   vals :- {s/Int s/Num}]
-  (let [v (SparseHashedVector/createLength length)]
-    (doseq [[idx val] vals]
-      (.unsafeSet v idx val))
-    v))
+  ([length :- s/Int]
+     (SparseHashedVector/createLength length))
+  ([length :- s/Int
+    vals :- {s/Int s/Num}]
+     (let [v (create-sparse-hashed-vector length)]
+       (doseq [[idx val] vals]
+         (.unsafeSet v idx val))
+       v)))
 
 (s/defn sparse-indexed-vector :- Vec
   ([v :- [s/Num]]
@@ -101,6 +103,55 @@
              (filter (comp not zero? second) 
                      (map vector (mx/index-seq m) (mx/eseq m))))))
 
+(s/defn binary-vector :- BinVec
+  "Create a binary vector with ones corresponding to given indices."
+  [size :- s/Int
+   selected-idxs :- [s/Int]]
+  (let [v (mx/zero-vector size)]
+    (doseq [idx selected-idxs]
+      (mx/mset! v idx 1))
+    v))
+
+(s/defn b-or :- BinVec
+  "Binary OR operation for BinVecs."
+  [& vecs :- [BinVec]]
+  (let [max-size (apply max (map mx/row-count vecs))]
+    (->> (mapcat mx/non-zero-indices vecs)
+         (reduce conj #{})
+         seq
+         (binary-vector max-size))))
+
+(s/defn select-rows :- [Vec]
+  [m :- Mat
+   idxs :- [s/Int]]
+  (map (partial mx/get-row m) idxs))
+
+(s/defn selected-rows :- Mat
+  "Return a matrix with unselected rows to zero."
+  [m :- Mat
+   row-indicator :- BinVec]
+
+  ;; TODO: Curious when/if this is much/any slower
+  (comment
+    (mx/inner-product (mx/sparse (mx/diagonal-matrix row-indicator)) m))
+
+  (let [[nrows ncols] (mx/shape m)
+        new-m (SparseRowMatrix/create nrows ncols)]
+    (doseq [row-idx (mx/non-zero-indices row-indicator)]
+      (mx/set-row! new-m row-idx (mx/get-row m row-idx)))
+    new-m))
+
+(s/defn normalize-log-prob :- ProbVec
+  "Normalize log probabilities and return as plain probabilities.
+  Probabilities < 1e-10 are dropped to zero."
+  [log-probs :- Vec]
+  (let [epsilon 1e-10
+        threshold (- (Math/log epsilon) (Math/log (mx/row-count log-probs)))
+        max-prob (mx/emax log-probs)]
+    (proportional (mx/emap (comp #(if (> threshold %) 0 (Math/exp %))
+                                 #(- % max-prob))
+                           log-probs))))
+
 (comment (s/defn set-row-non-zeros! :- Mat
            [m :- Mat
             row-idx :- s/Int
@@ -108,3 +159,4 @@
            (doseq [col-idx (mx/sparse [0 1 1 0 2])]
              (mx/mset! m row-idx col-idx (mx/mget row col-idx)))
            m))
+
