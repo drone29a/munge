@@ -2,44 +2,44 @@
   (:require [clojure.string :refer [split join trim]]
             [clojure.java.io :as io]
             [clojure.data.csv :as csv]
-            [schema.core :as sc]
-            [schema.macros :as sm]
-            [schema.coerce :as s.coerce]))
+            [schema.core :as s]
+            [schema.coerce :as s.coerce]
+            [munge.schema :refer [Nil]]))
 
 (defn quoted-str [^String s] (and (.startsWith s "\"") (.endsWith s "\"")))
 
-(def UnquotedStr (sc/pred #(and (string? %) (not (quoted-str %))) "unquoted-string"))
+(def UnquotedStr (s/pred #(and (string? %) (not (quoted-str %))) "unquoted-string"))
 (def +unquoted-coercion+ {UnquotedStr (fn [^String s] (if (quoted-str s)
                                                 (.substring s 1 (- (.length s) 1))
                                                 s))})
 (def +row-coercions+ (merge s.coerce/+string-coercions+
                             +unquoted-coercion+
-                            {sc/Int (fn [^String x]
+                            {s/Int (fn [^String x]
                                       (if (.equals "NA" x)
                                         -1
                                         ;;(s.coerce/edn-read-string x)
                                         (Integer/parseInt x)
                                         ))}))
 
-(sm/defn read-data-line :- [sc/Str]
+(s/defn read-data-line :- [s/Str]
   [separator :- Character
-   line :- sc/Str]
+   line :- s/Str]
   (first (csv/read-csv line :separator separator)))
 
 ;; TODO: not resilient to multiple line records
 ;; TODO: return type is dependent on arguments
-(sm/defn read-data-frame :- [[sc/Any]]
+(s/defn read-data-frame :- [[s/Any]]
   [separator :- Character
-   header? :- sc/Bool
-   col-names :- [(sc/either sc/Str sc/Keyword)]
-   row-schema :- sc/Schema
+   header? :- s/Bool
+   col-names :- [(s/either s/Str s/Keyword)]
+   row-schema :- s/Schema
    rdr :- java.io.Reader]  
   (let [data (csv/read-csv rdr :separator separator)
         ;;data (for [l lines] (read-data-line separator l))
         num-cols (-> data first count)
         default-col-names (vec (for [i (range num-cols)] (format "col-%d" i)))
         ;; Schema must not be a lazy-seq
-        unquoted-row-schema (vec (for [c-name default-col-names] (sc/one UnquotedStr c-name)))
+        unquoted-row-schema (vec (for [c-name default-col-names] (s/one UnquotedStr c-name)))
         col-names (or col-names default-col-names)
         row-schema (or row-schema unquoted-row-schema)
         parse-row (s.coerce/coercer row-schema +row-coercions+)
@@ -58,7 +58,17 @@
   (doseq [r records]
     (.write w (format "%s\n" (->> r (map (partial format "\"%s\"")) (join separator))))))
 
-;; returns [(sc/either {sc/Keyword sc/Str} [sc/Str])]
+(s/defn write-data-frame :- s/Any
+  [w :- java.io.Writer
+   headers :- (s/either [(s/either s/Str s/Keyword)] Nil)
+   records :- [[s/Any]]
+   separator :- Character]
+  (let [data (if (nil? headers)
+               records
+               (cons headers (seq records)))]
+    (csv/write-csv w data :separator separator)))
+
+;; returns [(s/either {s/Keyword s/Str} [s/Str])]
 (defn load-data-frame
   "Load a data frame from the given file.
   Arguments:
