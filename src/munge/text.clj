@@ -76,6 +76,10 @@
   (-> (.replaceAll (re-matcher #"(\w+?)/|-+|\\|\(|\)|\,|\.(\w+?)" token) "$1 $2")
       (tokenize)))
 
+(s/defn trim-contraction :- s/Str
+  [token :- s/Str]
+  (-> token (split #"'") first))
+
 (s/defn stopword? :- s/Bool
   [token :- s/Str]
   (contains? stopwords token))
@@ -96,6 +100,7 @@
        (filter has-alpha?)
        (remove url-like?)
        (map trim-non-alphanum)
+       (map trim-contraction)
        (map unhyphenate)
        (mapcat split-punctuation)
        (filter has-alpha?)

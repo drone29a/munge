@@ -79,12 +79,17 @@
     (is (= "somelongword"
            (unhyphenate "some-long-word")))
     (is (= "not--allofit"
-           (unhyphenate "not--all-of-it")))))
+           (unhyphenate "not--all-of-it"))))
+  (testing "removing contractions"
+    (is (= "people"
+           (trim-contraction "people's")))))
 
 (deftest extract-test
   (testing "extracting terms from a text string"
-    (is (= ["brown" "fox" "wait" "number"]
-           (extract-terms "The brown fox... wait, what? 123 - numbers?!")))))
+    (is (= ["level" "techn"]
+           (extract-terms "level.<br/>techn")))
+    (is (= ["brown" "fox" "wait" "peopl" "number"]
+           (extract-terms "The brown fox... wait, what? 123 - people's numbers?!")))))
 
 (deftest frequency-test
   (testing "term frequencyn"
