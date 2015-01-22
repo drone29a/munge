@@ -1,7 +1,9 @@
 (ns munge.graph
   (:require [schema.core :as s]
+            [clojure.set :refer [intersection]]
             [loom.graph :as lg]
             [loom.alg :as la]
+            [loom.attr :as lat]
             [munge.core :refer [update-for-keys]]
             [munge.schema :refer [Matrix Graph WeightedGraph]]
             [clojure.core.matrix :refer [zero-matrix sparse-matrix mset!] :as mx]))
@@ -125,6 +127,40 @@
       (mset! m (get node-index u) (get node-index v) (weight u v)))
     (mx/immutable m)))
 
+(def GroupNode {:name s/Str
+                :size s/Int
+                :members #{s/Any}})
+(s/defn group-nodes :- [GroupNode]
+  [groups :- [#{s/Any}]]
+  (map-indexed (fn [idx group]
+                 {:name (str idx)
+                  :size (count group)
+                  :members group})
+               groups))
+
+(def GroupEdge [(s/one s/Any "src") (s/one s/Any "dst") (s/one s/Int "weight")])
+(s/defn group-edges :- [GroupEdge]
+  "Construct undirected group edges."
+  [nodes :- [GroupNode]]
+  (for [src nodes
+        dst nodes
+        :let [weight (count (intersection (:members src)
+                                          (:members dst)))]
+        :when (and (not= (:name src) (:name dst))
+                   (not (zero? weight)))]
+    ;; Num shared researchers
+    [src dst weight]))
+
+(s/defn group-graph :- WeightedGraph
+  "Create a graph from a collection of sets of vertices. There will be a node for each
+  set and edges between sets which share set items in common. The edge weights are set
+  to the number of common items."
+  [ss :- [java.util.Set]]
+  (let [nodes (group-nodes ss)]
+    (-> (lg/weighted-graph)
+        (lg/add-nodes* nodes)
+        (lg/add-edges* (group-edges nodes)))))
+
 (s/defn largest-connected-component :- Graph
   [g :- Graph]
   (lg/subgraph g
@@ -132,3 +168,17 @@
                     (la/connected-components)
                     (sort-by count >)
                     (first))))
+
+(s/defn add-attr-fn-to-all :- Graph
+  "Adds an attribute with key attr-key to every node
+  with a value specified by get-attr-val."
+  [g :- Graph
+   attr-key :- s/Keyword
+   get-attr-val :- (s/=> s/Any s/Any)]
+  (loop [g* g
+         ns (lg/nodes g)]
+    (if (empty? ns)
+      g*
+      (let [n (first ns)]
+        (recur (lat/add-attr g* n attr-key (get-attr-val n))
+               (rest ns))))))
