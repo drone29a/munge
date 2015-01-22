@@ -77,6 +77,7 @@
       (do (mx/div! v l1-norm)
           v))))
 
+;; TODO: this calls proportional, why??
 (s/defn round-to-zero! :- Mat
   "Returns a new matrix (need to recompute sparse index) with 
   values below threshold set to 0."
