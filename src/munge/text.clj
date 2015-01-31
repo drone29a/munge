@@ -98,7 +98,6 @@
        strip-tex-markup
        tokenize
        (filter has-alpha?)
-       (remove url-like?)
        (map trim-non-alphanum)
        (map trim-contraction)
        (map unhyphenate)
@@ -182,7 +181,7 @@
   "Generate tf-idf matrix for a set of documents."
   [docs :- [s/Str]]
   (->> docs
-       (map extract-terms)
+       (pmap extract-terms)
        (tf-idf)
        (create-doc-term-matrix)))
 
