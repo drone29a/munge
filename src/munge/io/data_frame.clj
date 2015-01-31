@@ -12,8 +12,19 @@
 (def +unquoted-coercion+ {UnquotedStr (fn [^String s] (if (quoted-str s)
                                                 (.substring s 1 (- (.length s) 1))
                                                 s))})
+(defn int->boolean
+  [x]
+  (when (integer? x)
+    (if (or (= -1 x)
+            (= 0 x))
+      false
+      true)))
+(def +bool-coercion+ {s/Bool (fn [x] (cond
+                                      (string? x) (s.coerce/string->boolean x)
+                                      (integer? x) (int->boolean x)))})
 (def +row-coercions+ (merge s.coerce/+string-coercions+
                             +unquoted-coercion+
+                            +bool-coercion+
                             {s/Int (fn [^String x]
                                       (if (.equals "NA" x)
                                         -1
