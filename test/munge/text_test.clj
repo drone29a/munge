@@ -75,11 +75,11 @@
            (split-punctuation "basic/stuff")))
     (is (= ["spl" "it" "it" "right" "d" "own" "the" "mid" "dle"]
            (split-punctuation "spl)it--it,right\\d.own/the-mid(dle)"))))
-  (testing "making un-hyphenating hyphenated tokens"
+  (testing "un-hyphenating hyphenated tokens"
     (is (= "somelongword"
            (unhyphenate "some-long-word")))
-    (is (= "not--allofit"
-           (unhyphenate "not--all-of-it"))))
+    (is (= "yesallofit"
+           (unhyphenate "yes--all-of-it"))))
   (testing "removing contractions"
     (is (= "people"
            (trim-contraction "people's")))))

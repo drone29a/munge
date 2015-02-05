@@ -72,9 +72,12 @@
 
 (s/defn split-punctuation :- [s/Str]
   [token :- s/Str]
-  ;; TODO: should support multiple punctuation marks? at one point is text garbage...
-  (-> (.replaceAll (re-matcher #"(\w+?)/|-+|\\|\(|\)|\,|\.(\w+?)" token) "$1 $2")
-      (tokenize)))
+  ;; TODO: should support multiple punctuation marks? at what point is text garbage...
+  (comment (-> (.replaceAll (re-matcher #"(\w+?)/|-+|\\|\(|\)|\,|\.(\w+?)" token) "$1 $2")
+               (tokenize)))
+  (-> token
+      (replace #"/|\\|-+|\(|\)|\,|\." " ")
+      tokenize))
 
 (s/defn trim-contraction :- s/Str
   [token :- s/Str]
@@ -85,8 +88,9 @@
   (contains? stopwords token))
 
 (s/defn unhyphenate :- s/Str
+  "Replace hyphens with an empty string."
   [token :- s/Str]
-  (.replaceAll (re-matcher #"(\w+?)-(\w+?)" token) "$1$2"))
+  (replace token #"-" ""))
 
 ;; TODO: handle: "level.<br/>techn"
 ;; TODO: remove hyphens
