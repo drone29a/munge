@@ -6,6 +6,7 @@
            [mikera.vectorz.impl SparseIndexedVector SparseHashedVector]
            [mikera.vectorz.util DoubleArrays]))
 
+(set! *warn-on-reflection* true)
 ;; TODO: Much of this code are workarounds for the core.matrix and Vectorz.
 ;;       Ideally this or related code will make it back to core.matrix.
 ;;       The biggest issue is the creation of sparse matrices without
@@ -30,7 +31,7 @@
     vals :- {s/Int s/Num}]
      (let [v (create-sparse-hashed-vector length)]
        (doseq [[idx val] vals]
-         (.unsafeSet v idx val))
+         (.unsafeSet ^SparseHashedVector v idx val))
        v)))
 
 (s/defn sparse-indexed-vector :- Vec
@@ -45,7 +46,7 @@
        (SparseIndexedVector/wrap n nz-inds nz-data)))
   ([length :- s/Int
     vals :- {s/Int s/Num}]
-     (SparseIndexedVector/create (create-sparse-hashed-vector length vals))))
+     (SparseIndexedVector/create ^SparseHashedVector (create-sparse-hashed-vector length vals))))
 
 ;; TODO: remove support for [s/Num] rows, treat all as maps.
 (s/defn sparse-matrix :- Mat
@@ -62,15 +63,15 @@
 (s/defn proportional :- Vec
   "Normalize vector by L1-norm."
   [v :- Vec]
-  (let [^ints nz-idxs (mx/non-zero-indices v)
+  (let [nz-idxs (mx/non-zero-indices v)
         ;; TODO: non-zero-indices isn't guaranteed to return int[],
         ;;       but it does for the sparse data types and we want speeeeed
-        num-idxs (alength nz-idxs)
+        num-idxs (count nz-idxs)
         l1-norm (loop [idx (int 0)
                        sum (double 0.0)]
                   (if (> num-idxs idx)
                     (recur (inc idx)
-                           (+ sum (Math/abs (double (mx/mget v (aget nz-idxs idx))))))
+                           (+ sum (Math/abs (double (mx/mget v (get nz-idxs idx))))))
                     sum))]
     (if (zero? l1-norm)
       v
