@@ -101,9 +101,9 @@
 
 (s/defn vec-non-zeros :- {[s/Int] s/Num}
   "Gets the non-zero indices of an array mapped to the values."
-  ([m] (into {} 
-             (filter (comp not zero? second) 
-                     (map vector (mx/index-seq m) (mx/eseq m))))))
+  ([v :- Vec] (->> (mx/non-zero-indices v)
+                   (map (fn [idx] [[idx] (mx/mget v idx)]))
+                   (into {}))))
 
 (s/defn binary-vector :- BinVec
   "Create a binary vector with ones corresponding to given indices."
