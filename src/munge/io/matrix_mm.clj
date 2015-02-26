@@ -21,7 +21,7 @@
                         (Double/parseDouble x)])
         [header-lines rest-lines] (split-with #(.startsWith % "%") lines)
         [nrows ncols nnz] (parse-header (split-line (first rest-lines)))
-        m (mx/matrix (mikera.matrixx.impl.SparseRowMatrix/create nrows ncols))]
+        m (mikera.matrixx.impl.SparseRowMatrix/create nrows ncols)]
     (doseq [l (rest rest-lines)]
       (let [[i j x] (parse-tokens (split-line l))]
         (mx/mset! m i j x)))
