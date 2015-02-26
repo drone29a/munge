@@ -11,3 +11,16 @@
    ks :- [s/Any]
    init-v :- [s/Any]]
   (reduce (fn [acc-m k] (assoc acc-m k (f (get acc-m k init-v)))) m ks))
+
+(s/defn randomly :- s/Any
+  "Convenience function for randomly performing some side effect. Useful for
+  simple probabilistic logging.
+
+  Will always return the final argument x."
+  [p :- s/Num
+   f :- clojure.lang.IFn
+   x :- s/Any]
+  (if (> p (Math/random))
+    (do (f x)
+        x)
+    x))
