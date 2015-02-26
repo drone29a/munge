@@ -3,7 +3,7 @@
             [schema.core :as s]
             [munge.schema :refer [Mat Vec BinVec ProbVec]])
   (:import [mikera.matrixx.impl SparseRowMatrix SparseColumnMatrix]
-           [mikera.vectorz.impl SparseIndexedVector SparseHashedVector]
+           [mikera.vectorz.impl SparseIndexedVector SparseHashedVector ASparseVector]
            [mikera.vectorz.util DoubleArrays]))
 
 (set! *warn-on-reflection* true)
@@ -12,11 +12,11 @@
 ;;       The biggest issue is the creation of sparse matrices without
 ;;       allocating the memory required for the dense representation.
 
-(s/defn create-sparse-row-matrix :- Mat
+(s/defn sparse-row-matrix :- Mat
   [sparse-vecs :- [Vec]]
   (SparseRowMatrix/create ^"[Lmikera.vectorz.AVector;" (into-array mikera.vectorz.AVector sparse-vecs)))
 
-(s/defn create-sparse-column-matrix :- Mat
+(s/defn sparse-column-matrix :- Mat
   [sparse-vecs :- [Vec]]
   (SparseColumnMatrix/create ^"[Lmikera.vectorz.AVector;" (into-array mikera.vectorz.AVector sparse-vecs)))
 
@@ -24,12 +24,12 @@
   [length :- s/Int]
   (SparseIndexedVector/createLength length))
 
-(s/defn create-sparse-hashed-vector :- Vec
+(s/defn sparse-hashed-vector :- Vec
   ([length :- s/Int]
      (SparseHashedVector/createLength length))
   ([length :- s/Int
     vals :- {s/Int s/Num}]
-     (let [v (create-sparse-hashed-vector length)]
+     (let [v (sparse-hashed-vector length)]
        (doseq [[idx val] vals]
          (.unsafeSet ^SparseHashedVector v idx val))
        v)))
@@ -46,7 +46,11 @@
        (SparseIndexedVector/wrap n nz-inds nz-data)))
   ([length :- s/Int
     vals :- {s/Int s/Num}]
-     (SparseIndexedVector/create ^SparseHashedVector (create-sparse-hashed-vector length vals))))
+     (SparseIndexedVector/create ^SparseHashedVector (sparse-hashed-vector length vals)))
+  ([length :- s/Int
+    indices :- ints
+    vals :- doubles]
+     (SparseIndexedVector/wrap ^int length indices vals)))
 
 ;; TODO: remove support for [s/Num] rows, treat all as maps.
 (s/defn sparse-matrix :- Mat
@@ -55,23 +59,30 @@
   Each row may be a vector or a map."
   [nrows :- s/Int
    ncols :- s/Int
-   rows :- [(s/either [s/Num] {s/Int s/Num})]]
-  (create-sparse-row-matrix (map (fn [r] (if (vector? r)
-                                           (sparse-indexed-vector r)
-                                           (sparse-indexed-vector ncols r))) rows)))
+   rows :- [(s/either [s/Num] {s/Int s/Num} Vec)]]
+  (sparse-row-matrix (map (fn [r] (cond
+                                    (isa? (type r) mikera.vectorz.impl.ASparseVector) r
+                                    (vector? r) (sparse-indexed-vector r)
+                                    :else (sparse-indexed-vector ncols r))) rows)))
 
+(def ints-class (Class/forName "[I"))
 (s/defn proportional :- Vec
   "Normalize vector by L1-norm."
   [v :- Vec]
   (let [nz-idxs (mx/non-zero-indices v)
         ;; TODO: non-zero-indices isn't guaranteed to return int[],
         ;;       but it does for the sparse data types and we want speeeeed
-        num-idxs (count nz-idxs)
+        is-ints? (instance? ints-class nz-idxs)
+        num-idxs (if is-ints?
+                   (alength ^ints nz-idxs)
+                   (count nz-idxs))
         l1-norm (loop [idx (int 0)
                        sum (double 0.0)]
                   (if (> num-idxs idx)
                     (recur (inc idx)
-                           (+ sum (Math/abs (double (mx/mget v (get nz-idxs idx))))))
+                           (+ sum (Math/abs (double (mx/mget v (if is-ints?
+                                                                 (aget ^ints nz-idxs idx)
+                                                                 (nth nz-idxs idx)))))))
                     sum))]
     (if (zero? l1-norm)
       v
@@ -79,19 +90,23 @@
           v))))
 
 ;; TODO: this calls proportional, why??
-(s/defn round-to-zero! :- Mat
+(s/defn round-to-zero! :- (s/either Mat Vec)
   "Returns a new matrix (need to recompute sparse index) with 
   values below threshold set to 0."
   [threshold :- s/Num
    m :- (s/either Mat Vec)]
   ;; TODO: best speed assumes row matrix, fixable through current core.matrix API?
-  (let [vs (if (mx/vec? m) [m] (mx/rows m))]
-    (SparseRowMatrix/create ^java.util.List (map (fn [v] (when (instance? SparseIndexedVector v)
-                                                           (-> (.roundToZero ^SparseIndexedVector v threshold)
-                                                               (proportional))))
-                                                 vs))))
+  (if (mx/vec? m)
+    (.roundToZero ^SparseIndexedVector m threshold)
+    (let [vs (if (mx/vec? m) [m] (mx/rows m))]
+      (SparseRowMatrix/create ^java.util.List (map (fn [v] (when (instance? SparseIndexedVector v)
+                                                             (-> (.roundToZero ^SparseIndexedVector v threshold)
+                                                                 (proportional))))
+                                                   vs)))))
 
 ;; Use this until something better is included in core.matrix
+;; TODO: consider optimizations that do't require individual calls to mget
+;; TODO: consider optimizations when matrix is column-major
 (s/defn non-zeros :- {[s/Int] s/Num}
   "Gets the non-zero indices of an array mapped to the values."
   ([m :- Mat]
@@ -99,8 +114,11 @@
                     col-idx (mx/non-zero-indices (mx/get-row m row-idx))]
                 [[row-idx col-idx] (mx/mget m row-idx col-idx)]))))
 
+;; TODO: don't use mget, clone the internal array if it's a sparseindexedvector
 (s/defn vec-non-zeros :- {[s/Int] s/Num}
-  "Gets the non-zero indices of an array mapped to the values."
+  "Gets the non-zero indices of an array mapped to the values.
+
+  Warning: indices may not be in sequential order."
   ([v :- Vec] (->> (mx/non-zero-indices v)
                    (map (fn [idx] [[idx] (mx/mget v idx)]))
                    (into {}))))
