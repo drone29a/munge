@@ -3,11 +3,10 @@
             [clojure.java.io :as io]
             [clojure.core.matrix :as mx]
             [munge.schema :refer :all]
-            [schema.core :as sc]
-            [schema.macros :as sm])
+            [schema.core :as s])
   (:import [mikera.matrixx.impl SparseRowMatrix]))
 
-(sm/defn read-matrix :- Matrix
+(s/defn read-matrix :- Matrix
   [lines :- [String]]
   (let [split-line #(str/split % #"\s+")
         parse-header (fn [[nr nc nnz]]
@@ -27,7 +26,7 @@
         (mx/mset! m i j x)))
     m))
 
-(sm/defn write-matrix :- [String]
+(s/defn write-matrix :- [String]
   [m :- Matrix]
   (let [nrows (mx/row-count m)
         ncols (mx/column-count m)
@@ -42,7 +41,7 @@
                         (format "%s %s %s\n" (inc ri) (inc ci) (mx/mget c ri))))
                     (map-indexed vector cs)))))
 
-(comment (sm/defn write-matrix :- [String]
+(comment (s/defn write-matrix :- [String]
            [m :- Matrix]
            (let [nrows (mx/row-count m)
                  ncols (mx/column-count m)
@@ -56,14 +55,14 @@
                                    (format "%s %s %s\n" (inc i) (inc j) v))
                                  (map (partial apply conj) nzs)))))))
 
-(sm/defn load-matrix :- Matrix
-  [path :- String]
+(s/defn load-matrix :- Matrix
+  [path :- (s/either String java.io.File)]
   (with-open [r (io/reader path)]
     (read-matrix (line-seq r))))
 
-(sm/defn save-matrix
+(s/defn save-matrix
   [m :- Matrix
-   path :- String]
+   path :- (s/either String java.io.File)]
   (with-open [w (io/writer path)]
     (doseq [l (write-matrix m)]
       (.write w l))))
