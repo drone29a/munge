@@ -16,15 +16,13 @@
             [schema.core :as sc]
             [schema.macros :as sm]
             [clojure.java.io :as io]
-            [clojure.string :refer [join]])
+            [clojure.string :refer [join]]
+            [munge.schema :refer [Graph Nil]])
   (:import [java.io.File]
            [schema.core One]))
 
-(def Graph (sc/pred (partial satisfies? lg/Graph)))
 (def Node {sc/Keyword sc/Any})
 (def Edge (sc/pred (partial satisfies? lg/Edge)))
-(def Nil (sc/pred nil?))
-
 
 (def +types+
   "Mapping of schema primitives to GDF type annotations."
