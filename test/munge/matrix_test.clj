@@ -28,3 +28,19 @@
                        (binary-vector 5 [4]))))
   (is (mx/equals (binary-vector 3 [0])
                  (b-or (binary-vector 3 [0])))))
+
+(deftest l1-norm-test
+  (is (= 1.0 (l1-norm (-> (mx/new-sparse-array [1000])
+                          (mx/mset 0 0.2)
+                          (mx/mset 1 -0.2)
+                          (mx/mset 42 0.1)
+                          (mx/mset 900 0.5)))))
+  (is (= 30.0 (l1-norm (-> (mx/new-vector 1000)
+                           (mx/mset 0 5)
+                           (mx/mset 43 -10)
+                           (mx/mset 613 0.5)
+                           (mx/mset 999 14.5))))))
+
+(deftest proportional-test
+  (is (mx/equals (mx/matrix [0.3 0.3 0.4])
+                 (proportional (mx/matrix [30 30 40])))))

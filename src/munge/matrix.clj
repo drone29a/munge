@@ -4,6 +4,7 @@
             [munge.schema :refer [Mat Vec BinVec ProbVec]])
   (:import [mikera.matrixx.impl SparseRowMatrix SparseColumnMatrix]
            [mikera.vectorz.impl SparseIndexedVector SparseHashedVector ASparseVector]
+           [mikera.vectorz AVector]
            [mikera.vectorz.util DoubleArrays]))
 
 (set! *warn-on-reflection* true)
@@ -36,21 +37,21 @@
 
 (s/defn sparse-indexed-vector :- Vec
   ([v :- [s/Num]]
-     (let [data (double-array v)
-           n (count data)
-           nz-inds (DoubleArrays/nonZeroIndices data 0 n)
-           nnz (count nz-inds)
-           nz-data (double-array nnz)]
-       (dotimes [i nnz]
-         (aset nz-data i (aget data (aget nz-inds i))))
-       (SparseIndexedVector/wrap n nz-inds nz-data)))
+   (let [data (double-array v)
+         n (count data)
+         nz-inds (DoubleArrays/nonZeroIndices data 0 n)
+         nnz (count nz-inds)
+         nz-data (double-array nnz)]
+     (dotimes [i nnz]
+       (aset nz-data i (aget data (aget nz-inds i))))
+     (SparseIndexedVector/wrap n nz-inds nz-data)))
   ([length :- s/Int
     vals :- {s/Int s/Num}]
-     (SparseIndexedVector/create ^SparseHashedVector (sparse-hashed-vector length vals)))
+   (SparseIndexedVector/create ^SparseHashedVector (sparse-hashed-vector length vals)))
   ([length :- s/Int
     indices :- ints
     vals :- doubles]
-     (SparseIndexedVector/wrap ^int length indices vals)))
+   (SparseIndexedVector/wrap ^int length indices vals)))
 
 ;; TODO: remove support for [s/Num] rows, treat all as maps.
 (s/defn sparse-matrix :- Mat
@@ -65,28 +66,24 @@
                                     (vector? r) (sparse-indexed-vector r)
                                     :else (sparse-indexed-vector ncols r))) rows)))
 
-(def ints-class (Class/forName "[I"))
+;; TODO: push smarter impl upstream to vectorz
+;;       there should be a non-zero-vals if we want to do comps in Clojure;
+;;       other option is to expose abs via matrix-api so we don't have to test
+;;       if vector is derived from AVector
+(s/defn l1-norm :- s/Num
+  "Compute L1 norm."
+  [v :- Vec]
+  (if (instance? AVector v)
+    (.elementSum ^AVector (.absCopy ^AVector v))
+    (throw "Unsupported vector type!")))
+
 (s/defn proportional :- Vec
   "Normalize vector by L1-norm."
   [v :- Vec]
-  (let [nz-idxs (mx/non-zero-indices v)
-        ;; TODO: non-zero-indices isn't guaranteed to return int[],
-        ;;       but it does for the sparse data types and we want speeeeed
-        is-ints? (instance? ints-class nz-idxs)
-        num-idxs (if is-ints?
-                   (alength ^ints nz-idxs)
-                   (count nz-idxs))
-        l1-norm (loop [idx (int 0)
-                       sum (double 0.0)]
-                  (if (> num-idxs idx)
-                    (recur (inc idx)
-                           (+ sum (Math/abs (double (mx/mget v (if is-ints?
-                                                                 (aget ^ints nz-idxs idx)
-                                                                 (nth nz-idxs idx)))))))
-                    sum))]
-    (if (zero? l1-norm)
+  (let [norm (l1-norm v)]
+    (if (zero? norm)
       v
-      (do (mx/div! v l1-norm)
+      (do (mx/div! v norm)
           v))))
 
 ;; TODO: this calls proportional, why??
