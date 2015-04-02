@@ -45,9 +45,14 @@
 (s/defn save-gml :- Nil
   [g :- Graph
    path :- java.io.File]
-  (let [ns (lg/nodes g)]
+  (let [ns (lg/nodes g)
+        es (->> (lg/edges g)
+                ;; Remove duplicates, graph is undirected and each
+                ;; edge should be recorded only once.
+                (filter (fn [e] (< (-> e lg/src :id)
+                                   (-> e lg/dest :id)))))]
     (with-open [w (io/writer path)]
-      (write-gml node->str-with-attrs edge->str w ns (lg/edges g)))))
+      (write-gml node->str-with-attrs edge->str w ns es))))
 
 (s/defn read-gml :- Nil
   []
