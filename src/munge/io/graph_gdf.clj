@@ -13,33 +13,32 @@
   will be replaced with computed values in the output."
   (:require [loom.graph :as lg]
             [loom.attr :as lattr]
-            [schema.core :as sc]
-            [schema.macros :as sm]
+            [schema.core :as s]
             [clojure.java.io :as io]
             [clojure.string :refer [join]]
             [munge.schema :refer [Graph Nil]])
   (:import [java.io.File]
-           [schema.core One]))
+           [schema.core One Schema]))
 
-(def Node {sc/Keyword sc/Any})
-(def Edge (sc/pred (partial satisfies? lg/Edge)))
+(def Node {s/Keyword s/Any})
+(def Edge (s/pred (partial satisfies? lg/Edge)))
 
 (def +types+
   "Mapping of schema primitives to GDF type annotations."
-  {sc/Int "INT"
-   sc/Str "VARCHAR"
-   sc/Num "DOUBLE"
-   sc/Bool "BOOLEAN"})
+  {s/Int "INT"
+   s/Str "VARCHAR"
+   s/Num "DOUBLE"
+   s/Bool "BOOLEAN"})
 
-(def required-node-fields [(sc/one sc/Str "name")])
+(def required-node-fields [(s/one s/Str "name")])
 
-(def required-edge-fields [(sc/one sc/Str "node1")
-                           (sc/one sc/Str "node2")
-                           (sc/one sc/Int "weight")])
+(def required-edge-fields [(s/one s/Str "node1")
+                           (s/one s/Str "node2")
+                           (s/one s/Int "weight")])
 
-(sm/defn serialize-node :- sc/Str
-  [node-schema :- sc/Schema
-   get-name :- (sc/=> sc/Str Node)
+(s/defn serialize-node :- s/Str
+  [node-schema :- Schema
+   get-name :- (s/=> s/Str Node)
    g :- Graph
    n :- Node]
   (let [n-props (merge (lattr/attrs g n)
@@ -48,13 +47,13 @@
     (join "," (for [field (concat required-node-fields node-schema)
                     :let [k (-> (:name field) keyword)
                           schema (:schema field)]]
-                (if (= schema sc/Str)
+                (if (= schema s/Str)
                   (format "'%s'" (n-props k)) ; single quote string values
                   (n-props k))))))
 
-(sm/defn serialize-edge :- sc/Str
-  [edge-schema :- sc/Schema
-   get-name :- (sc/=> sc/Str Node)
+(s/defn serialize-edge :- s/Str
+  [edge-schema :- Schema
+   get-name :- (s/=> s/Str Node)
    g :- Graph
    e :- Edge]
   (let [e-props (merge (lattr/attrs g e)
@@ -65,28 +64,28 @@
                                   edge-schema)
                     :let [k (-> (:name field) keyword)
                           schema (:schema field)]]
-                (if (= schema sc/Str)
+                (if (= schema s/Str)
                   (format "'%s'" (e-props k)) ; single quote string values
                   (e-props k))))))
 
-(sm/defn field-header :- sc/Str
+(s/defn field-header :- s/Str
   [schema :- One]
   (format "%s %s" (:name schema) (-> (:schema schema) +types+)))
 
-(sm/defn node-header :- sc/Str
+(s/defn node-header :- s/Str
   [node-schema :- [One]]
   (format "nodedef> %s" (join "," (map field-header (concat required-node-fields node-schema)))))
 
-(sm/defn edge-header :- sc/Str
+(s/defn edge-header :- s/Str
   [edge-schema :- [One]]
   (format "edgedef> %s" (join "," (map field-header (concat required-edge-fields edge-schema)))))
 
 ;; TODO: implement me
-(sm/defn read-gdf :- Graph
-  [lines :- [sc/Str]]
+(s/defn read-gdf :- Graph
+  [lines :- [s/Str]]
   nil)
 
-(sm/defn write-gdf :- Nil
+(s/defn write-gdf :- Nil
   [ser-n ser-e node-schema edge-schema w ns es]
   (.write w (format "%s\n" (node-header node-schema)))
   (doseq [n ns]
@@ -96,16 +95,16 @@
     (.write w (format "%s\n" (ser-e e)))))
 
 ;; TODO: implement me
-(sm/defn load-gdf :- Graph
-  [path :- sc/Str]
+(s/defn load-gdf :- Graph
+  [path :- s/Str]
   nil)
 
-(sm/defn save-gdf :- Nil
+(s/defn save-gdf :- Nil
   [g :- Graph
-   node-schema :- sc/Schema
-   edge-schema :- sc/Schema
-   get-name :- (sc/=> sc/Str Node)
-   path :- sc/Str]
+   node-schema :- Schema
+   edge-schema :- Schema
+   get-name :- (s/=> s/Str Node)
+   path :- s/Str]
   (let [srl-node (partial serialize-node node-schema get-name g)
         srl-edge (partial serialize-edge edge-schema get-name g)]
     (with-open [w (io/writer path)]
