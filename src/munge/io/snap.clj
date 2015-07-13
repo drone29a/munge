@@ -2,10 +2,9 @@
   "Functions for loading SNAP datasets."
   (:require [clojure.string :as str]
             [clojure.data.csv :as csv]
-            [commune.matrix :as mat]
+            [clojure.core.matrix :as mat]
             [clojure.java.io :as io]
-            [munge.io])
-  (:import [cern.colt.matrix DoubleMatrix2D]))
+            [munge.io.matrix-ctf :as io.ctf]))
 
 (defn read-edges [lines]
   (map (comp sort
@@ -20,7 +19,7 @@
 
 (defn mat-from-edges [es]
   (let [dim (inc (apply max (flatten es)))
-        m (mat/make-sparse-matrix dim dim)]
+        m (mat/new-sparse-array [dim dim])]
     (doseq [[x y] es]
       (.setQuick m x y 1))
     m))
@@ -34,7 +33,7 @@
           verts (set (flatten edges))
           ego-edges (map vector verts (repeat ego-vert))
           m (mat-from-edges (concat edges ego-edges))]
-      (commune.io/save-matrix m ctf-path))))
+      (io.ctf/save-matrix m ctf-path))))
 
 (defn read-feats [lines]
   (map (comp (partial map #(Integer/parseInt %)) rest #(str/split % #"\s+") str/trim)
@@ -51,7 +50,7 @@
 (defn mat-from-feats [fs]
   (let [nrows (count fs)
         ncols (count (first fs))
-        m (mat/make-sparse-matrix nrows ncols)]
+        m (mat/new-sparse-array [nrows ncols])]
     (doseq [[i f-row] (map-indexed vector fs)]
       (doseq [[j val] (map-indexed vector f-row)]
         (when (not (zero? val))
@@ -63,7 +62,7 @@
     (let [feats (-> r line-seq read-feats)
           ego-feats (load-ego-feats ego-feats-path)
           m (mat-from-feats (conj feats ego-feats))]
-      (commune.io/save-matrix m ctf-path))))
+      (io.ctf/save-matrix m ctf-path))))
 
 (defn read-circles [lines]
   (map (comp (partial map #(Integer/parseInt %))
@@ -74,6 +73,8 @@
 (defn load-circles [circle-path]
   (with-open [r (io/reader circle-path)]
     (doall (read-circles (line-seq r)))))
+
+(def load-communities load-circles)
 
 (defn read-feat-names [lines]
   (map (comp (partial str/join " ")

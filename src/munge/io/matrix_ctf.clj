@@ -2,7 +2,8 @@
   (require [clojure.string :refer [split]]
            [clojure.java.io :as io]
            [clojure.core.matrix :as mx]
-           [munge.core :refer :all]))
+           [munge.core :refer :all]
+           [munge.matrix]))
 
 (defn read-matrix [lines]
   "Loads a matrix in coordinate text format."
@@ -27,7 +28,7 @@
   "Serialize a matrix into CTF, returns seq of lines."
   (let [nrows (mx/row-count m)
         ncols (mx/column-count m)
-        nzs (sort-by (comp second first) (non-zeros m)) ; sort into column-major order
+        nzs (sort-by (comp second first) (munge.matrix/non-zeros m)) ; sort into column-major order
         nnz (count nzs)]
     (cons (format "%s %s %s\n" nrows ncols nnz)
           (map (fn [[i j v]]
