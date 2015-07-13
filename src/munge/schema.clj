@@ -49,5 +49,4 @@
 (def Graph (s/protocol lg/Graph))
 (def WeightedGraph (s/both (s/protocol lg/WeightedGraph) Graph))
 
-
 (def Nil (s/pred nil?))
