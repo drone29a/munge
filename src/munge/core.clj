@@ -30,9 +30,3 @@
     (do (f x)
         x)
     x))
-
-(t/ann-record OrderedPair
-              [x :- Node
-               y :- Node])
-(defrecord OrderedPair
-    [x y])
