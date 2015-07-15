@@ -1,5 +1,6 @@
 (ns munge.graph
   (:require [schema.core :as s]
+            [clojure.core.typed :as t]
             [clojure.set :refer [intersection]]
             [loom.graph :as lg]
             [loom.alg :as la]
@@ -182,3 +183,19 @@
       (let [n (first ns)]
         (recur (lat/add-attr g* n attr-key (get-attr-val n))
                (rest ns))))))
+
+(t/defn subgraph-edges
+  "Grab edges connecting a subset of nodes."
+  [g :- Graph
+   ns :- (t/Seq MapNode)] :- (t/Seq WeightedEdge)
+   (->> (lg/edges g)
+        (filter (fn [[n1 n2]] (and (contains? ns n1)
+                                   (contains? ns n2))))
+        (map (comp #(conj % 1) vec))))
+
+;; TODO: needs lots of work to generalize, better to use new impl of Graph/WeightedGraph (complete those).
+(t/defn edges->graph
+  "Create a graph from edges."
+  [es :- (t/Seq WeightedEge)] :- Graph
+   (-> (lg/weighted-graph)
+       (lg/add-edges* es)))
