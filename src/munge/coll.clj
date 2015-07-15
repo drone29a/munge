@@ -11,13 +11,17 @@
      [x y]
      [y x]))
 
+(t/defprotocol [a] Pair
+  (x [p] :- a "Return the item in the x slot.")
+  (y [p] :- a "Return the item in the y slot."))
+
 ;; Unordered pairs
-(t/ann-record [[a :variance :invariant]] Pair 
+(t/ann-record [[a :variance :invariant]] UnorderedPair 
               [x :- a
                y :- a])
 ;; TODO: Really want auto Keyword->field accessors for deftypes.
 ;;       Maybe add potemkin or a macro later?
-(deftype Pair [x y]
+(deftype UnorderedPair [x y]
   Object
   (equals [this other] (or (and (= (.x this) (.x other))
                                 (= (.y this) (.y other)))
@@ -42,4 +46,16 @@
   ;;   (throw (UnsupportedOperationException. "Function not supported for Pair type.")))
   ;; (get [this key]
   ;;   (throw (UnsupportedOperationException. "Function not supported for Pair type.")))
-  )
+  Pair
+  (x [p] (:x p))
+  (y [p] (:y p)))
+
+(t/ann-record [[a :variance :invariant]]
+              OrderedPair
+              [x :- a
+               y :- a])
+(defrecord OrderedPair
+    [x y]
+  Pair
+  (x [p] (:x p))
+  (y [p] (:y p)))
