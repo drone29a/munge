@@ -39,11 +39,12 @@
 
 ;; TODO: not resilient to multiple line records
 ;; TODO: return type is dependent on arguments
+;; TODO: row-schema should be a s/Schema, but doesn't seem to be supported by Schema lib??
 (s/defn read-data-frame :- [[s/Any]]
   [separator :- Character
    header? :- s/Bool
    col-names :- [(s/either s/Str s/Keyword)]
-   row-schema :- s/Schema
+   row-schema :- s/Any
    rdr :- java.io.Reader]  
   (let [data (csv/read-csv rdr :separator separator)
         ;;data (for [l lines] (read-data-line separator l))
@@ -65,19 +66,20 @@
 ;; TODO: move to csv lib?
 (defn write-data-frame [w headers records separator]
   (when headers
-    (.write w (format "%s\n" (->> headers (map (partial format "\"%s\"")) (join separator)))))
+    (.write w (format "%s\n" (->> headers (map (comp (partial format "\"%s\"") name)) (join separator)))))
   (doseq [r records]
     (.write w (format "%s\n" (->> r (map (partial format "\"%s\"")) (join separator))))))
 
-(s/defn write-data-frame :- s/Any
-  [w :- java.io.Writer
-   headers :- (s/either [(s/either s/Str s/Keyword)] Nil)
-   records :- [[s/Any]]
-   separator :- Character]
-  (let [data (if (nil? headers)
-               records
-               (cons headers (seq records)))]
-    (csv/write-csv w data :separator separator)))
+(comment
+  (s/defn write-data-frame :- s/Any
+    [w :- java.io.Writer
+     headers :- (s/either [(s/either s/Str s/Keyword)] Nil)
+     records :- [[s/Any]]
+     separator :- Character]
+    (let [data (if (nil? headers)
+                 records
+                 (cons (map name headers) (seq records)))]
+      (csv/write-csv w data :separator separator))))
 
 ;; returns [(s/either {s/Keyword s/Str} [s/Str])]
 (defn load-data-frame
