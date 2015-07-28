@@ -10,4 +10,8 @@
                  [net.mikera/vectorz-clj "0.29.1-SNAPSHOT"]
                  [prismatic/schema "0.4.3"]
                  [aysylu/loom "0.5.1-SNAPSHOT"]
-                 [stemmers "0.2.2"]])
+                 [stemmers "0.2.2"]
+                 ;; TODO: Move to separate lib?
+                 ;; [mkobos/lbfgsb-wrapper "1.1.3-SNAPSHOT" :native-prefix ""]
+                 ]
+  :native-path "native")
