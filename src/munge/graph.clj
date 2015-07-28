@@ -199,3 +199,25 @@
   [es :- (t/Seq WeightedEge)] :- Graph
    (-> (lg/weighted-graph)
        (lg/add-edges* es)))
+
+(t/defalias SpanTree (t/Map MapNode (t/Vec MapNode)))
+
+;; TODO: write test for this
+(t/defn span-tree->paths
+  "Create a sequence of paths from predecessor maps.
+  E.g., those returned by loom.alg/bf-all-pairs-shortest-paths."
+  [span-tree :- SpanTree
+   src :- MapNode]
+  (loop [paths [[src]]
+         to-expand (set (map (partial vector src) (get span-tree src)))]
+    (if (empty? to-expand)
+      paths
+      ;; These are the current paths which may need to be expanded if the last node
+      ;; in the path is connected to something else that hasn't been reached by another
+      ;; path.
+      (let [next-path (first to-expand)
+            node (last next-path)
+            reached-nodes (get span-tree node)
+            new-paths (map (partial conj next-path) reached-nodes)]
+        (recur (concat paths new-paths)
+               (apply conj (disj to-expand next-path) new-paths))))))
