@@ -66,9 +66,9 @@
 ;; TODO: move to csv lib?
 (defn write-data-frame [w headers records separator]
   (when headers
-    (.write w (format "%s\n" (->> headers (map (comp (partial format "\"%s\"") name)) (join separator)))))
+    (.write ^java.io.Writer w (format "%s\n" (->> headers (map (comp (partial format "\"%s\"") name)) (join separator)))))
   (doseq [r records]
-    (.write w (format "%s\n" (->> r (map (partial format "\"%s\"")) (join separator))))))
+    (.write ^java.io.Writer w (format "%s\n" (->> r (map (partial format "\"%s\"")) (join separator))))))
 
 (comment
   (s/defn write-data-frame :- s/Any
