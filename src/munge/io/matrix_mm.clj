@@ -18,7 +18,7 @@
                        [(dec (Double/parseDouble i))
                         (dec (Double/parseDouble j))
                         (Double/parseDouble x)])
-        [header-lines rest-lines] (split-with #(.startsWith % "%") lines)
+        [header-lines rest-lines] (split-with (fn [^String l] (.startsWith l "%")) lines)
         [nrows ncols nnz] (parse-header (split-line (first rest-lines)))
         m (mikera.matrixx.impl.SparseRowMatrix/create nrows ncols)]
     (doseq [l (rest rest-lines)]
@@ -63,6 +63,6 @@
 (s/defn save-matrix
   [m :- Matrix
    path :- (s/either String java.io.File)]
-  (with-open [w (io/writer path)]
+  (with-open [^java.io.Writer w (io/writer path)]
     (doseq [l (write-matrix m)]
       (.write w l))))

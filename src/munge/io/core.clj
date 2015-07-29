@@ -1,6 +1,7 @@
 (ns munge.io.core
   (:require [clojure.string :as str]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.core.matrix :as mx]))
 
 (defn load-ids [path]
   (with-open [r (io/reader path)]
@@ -19,11 +20,11 @@
 
 (defn load-term-doc [lines tdm]
   "Loads a term-doc matrix from space-delimited row lines."
-  (let [num-rows (.rows tdm)
-        num-cols (.columns tdm)]
+  (let [num-rows (mx/row-count tdm)
+        num-cols (mx/column-count tdm)]
     (doseq [[row-idx l] (map vector (range num-rows) lines)]
       (doseq [[col-idx x] (line-to-list l)]
-        (.setQuick tdm row-idx col-idx x))))
+        (mx/mset! tdm row-idx col-idx x))))
   tdm)
 
 (defn load-index [lines]
