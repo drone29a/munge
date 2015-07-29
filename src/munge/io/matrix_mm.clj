@@ -64,5 +64,5 @@
   [m :- Matrix
    path :- (s/either String java.io.File)]
   (with-open [^java.io.Writer w (io/writer path)]
-    (doseq [l (write-matrix m)]
+    (doseq [^String l (write-matrix m)]
       (.write w l))))
