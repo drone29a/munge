@@ -1,4 +1,4 @@
-(defproject munge "0.1.0-SNAPSHOT"
+(defproject munge "0.1.1"
   :description "Support for data processing and anaylsis."
   :url "https://github.com/mattrepl/munge"
   :license {:name "Eclipse Public License"
