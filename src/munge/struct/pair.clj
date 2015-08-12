@@ -28,7 +28,7 @@
                                 (= (.y this) (.y other)))
                            (and (= (.x this) (.y other))
                                 (= (.y this) (.x other)))))
-  (hashCode [this] (.hashCode (sorted-pair x y)))
+  (hashCode [this] (.hashCode ^clojure.lang.PersistentVector (sorted-pair x y)))
   (toString [this] (str (sorted-pair x y)))
   ILookup
   (valAt [this key]
