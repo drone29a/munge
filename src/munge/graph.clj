@@ -1,13 +1,15 @@
 (ns munge.graph
   (:require [schema.core :as s]
             [clojure.core.typed :as t]
+            [clojure.core.reducers :as r]
             [clojure.set :refer [intersection]]
             [loom.graph :as lg]
             [loom.alg :as la]
             [loom.attr :as lat]
             [munge.core :refer [update-for-keys]]
             [munge.schema :refer [Matrix Graph WeightedGraph]]
-            [clojure.core.matrix :refer [zero-matrix sparse-matrix mset!] :as mx]))
+            [clojure.core.matrix :refer [zero-matrix sparse-matrix mset!] :as mx])
+  (:import [java.util BitSet]))
 
 ;; TODO: Fix the need for selected-nodes?
 (s/defn selected-path-distances :- {s/Any {s/Any s/Int}}
@@ -184,6 +186,10 @@
         (recur (lat/add-attr g* n attr-key (get-attr-val n))
                (rest ns))))))
 
+;; TODO: Adding a default weight seems silly. Can we avoid this
+;;       by using better graph implementations and helpers?
+;;       E.g., a function that wraps an unweighted (or weighted)
+;;       graph and responds with "1" for all weights of valid edges.
 (t/defn subgraph-edges
   "Grab edges connecting a subset of nodes."
   [g :- Graph
@@ -192,6 +198,34 @@
         (filter (fn [[n1 n2]] (and (contains? ns n1)
                                    (contains? ns n2))))
         (map (comp #(conj % 1) vec))))
+
+;; TODO: Passing in edges as a collection increases performance
+;;       over passing in the graph and calling loom.graph/edges, when
+;;       we want to use the same collection of edges multiple times.
+;;       This is due to how the edges are represented by the default
+;;       loom impl.
+;; TODO: Extract relevant code and make an IdSet set type that uses a get-id fn
+;;       and implements the Set protocol.
+(t/defn subgraph-edges-by-id
+  "Grab edges connecting a subset of nodes.
+  
+  WARNING: A BitSet is used to hold contiguous node IDs.
+  The BitSet will be of size (apply max node-ids)."
+  [es :- (t/Coll Edges)
+   get-id :- (t/Fn [MapNode -> t/Int])
+   ns :- (t/Seq MapNode)] :- (t/Seq WeightedEdge)
+   (let [n-ids (->> ns (map get-id) distinct)
+         max-id (r/fold (fn max*
+                          ([] 0)
+                          ([x] x)
+                          ([x y] (max x y)))
+                        n-ids)
+         n-id-set (BitSet. max-id)]
+     (doseq [n-id n-ids]
+       (.set ^BitSet n-id-set n-id))
+     (->> es
+          (filter (fn [[n1 n2]] (and (.get ^BitSet n-id-set (get-id n1)) 
+                                     (.get ^BitSet n-id-set (get-id n2))))))))
 
 ;; TODO: needs lots of work to generalize, better to use new impl of Graph/WeightedGraph (complete those).
 (t/defn edges->graph
