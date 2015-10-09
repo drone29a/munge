@@ -1,5 +1,6 @@
 (ns munge.io.matrix-mm
-  (:require [clojure.string :as str]
+  (:require [clojure.core.typed :as t]
+            [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.core.matrix :as mx]
             [munge.schema :refer :all]
