@@ -2,7 +2,8 @@
   (:require [clojure.test :refer :all]
             [munge.matrix :refer :all]
             [clojure.core.matrix :as mx]
-            [schema.test]))
+            [schema.test]
+            [munge.core-test :refer [close?]]))
 
 (use-fixtures :once schema.test/validate-schemas)
 
@@ -40,6 +41,18 @@
                            (mx/mset 43 -10)
                            (mx/mset 613 0.5)
                            (mx/mset 999 14.5))))))
+
+(deftest l2-norm-test
+  (is (close? 0.001 0.583 (l2-norm (-> (mx/new-sparse-array [1000])
+                                       (mx/mset 0 0.2)
+                                       (mx/mset 1 -0.2)
+                                       (mx/mset 42 0.1)
+                                       (mx/mset 900 0.5)))))
+  (is (close? 0.001 18.316 (l2-norm (-> (mx/new-vector 1000)
+                                        (mx/mset 0 5)
+                                        (mx/mset 43 -10)
+                                        (mx/mset 613 0.5)
+                                        (mx/mset 999 14.5))))))
 
 (deftest proportional-test
   (is (mx/equals (mx/matrix [0.3 0.3 0.4])

@@ -77,6 +77,13 @@
     (.elementSum ^AVector (.absCopy ^AVector v))
     (throw "Unsupported vector type!")))
 
+(s/defn l2-norm :- s/Num
+  "Compute L2 norm."
+  [v :- Vec]
+  (if (instance? AVector v)
+    (Math/sqrt (.elementSum ^AVector (.squareCopy ^AVector v)))
+    (throw "Unsupported vector type!")))
+
 (s/defn proportional :- Vec
   "Normalize vector by L1-norm."
   [v :- Vec]
