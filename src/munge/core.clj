@@ -39,3 +39,11 @@
                                         (.getDeclaredField field))]
      (.setAccessible f true)
      (.get f x)))
+
+;; TODO: feels like there's a more general way to represent this
+(t/defn :forall [a]
+  group-pairs
+  "Creates a seq of pairs formed from partitioning (drop-last xs) and (rest xs)."
+  [xs :- (t/Seq a)] :- (t/Seq (t/I (t/Seq a) (t/ExactCount 2)))
+  (->> (interleave (drop-last xs) (rest xs))
+       (partition 2)))
