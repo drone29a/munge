@@ -75,14 +75,14 @@
   [v :- Vec]
   (if (instance? AVector v)
     (.elementSum ^AVector (.absCopy ^AVector v))
-    (throw "Unsupported vector type!")))
+    (throw (Exception. "Unsupported vector type!"))))
 
 (s/defn l2-norm :- s/Num
   "Compute L2 norm."
   [v :- Vec]
   (if (instance? AVector v)
     (Math/sqrt (.elementSum ^AVector (.squareCopy ^AVector v)))
-    (throw "Unsupported vector type!")))
+    (throw (Exception. "Unsupported vector type!"))))
 
 (s/defn proportional :- Vec
   "Normalize vector by L1-norm."
@@ -96,7 +96,9 @@
 ;; TODO: this calls proportional, why??
 (s/defn round-to-zero! :- (s/either Mat Vec)
   "Returns a new matrix (need to recompute sparse index) with 
-  values below threshold set to 0."
+  values below threshold set to 0. 
+
+  Requires vectors to be sparse indexed implementations."
   [threshold :- s/Num
    m :- (s/either Mat Vec)]
   ;; TODO: best speed assumes row matrix, fixable through current core.matrix API?
