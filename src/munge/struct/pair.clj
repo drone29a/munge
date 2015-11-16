@@ -17,9 +17,9 @@
   (y [p] :- a "Return the item in the y slot."))
 
 ;; Unordered pairs
-(t/ann-record [[a :variance :invariant]] UnorderedPair 
-              [x :- a
-               y :- a])
+(t/ann-datatype [[a :variance :invariant]] UnorderedPair 
+                [x :- a
+                 y :- a])
 ;; TODO: Really want auto Keyword->field accessors for deftypes.
 ;;       Maybe add potemkin or a macro later?
 (deftype UnorderedPair [x y]
