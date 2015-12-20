@@ -2,6 +2,7 @@
   (:require [clojure.string :refer [split join trim]]
             [clojure.java.io :as io]
             [clojure.data.csv :as csv]
+            [clojure.core.typed :as t]
             [schema.core :as s]
             [schema.coerce :as s.coerce]
             [munge.schema :refer [Nil]]))
@@ -97,6 +98,10 @@
   (with-open [r (io/reader path)]
     (read-data-frame separator header? col-names row-schema r)))
 
-(defn save-data-frame [path headers records separator]
+(t/defn save-data-frame
+  [path :- java.io.File
+   headers :- (t/Seq t/Kw)
+   records :- (t/Seq (t/Coll))
+   separator :- Character]
   (with-open [w (io/writer path)]
     (write-data-frame w headers records separator)))

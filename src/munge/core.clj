@@ -47,3 +47,15 @@
   [xs :- (t/Seq a)] :- (t/Seq (t/I (t/Seq a) (t/ExactCount 2)))
   (->> (interleave (drop-last xs) (rest xs))
        (partition 2)))
+
+(t/defn :forall [a]
+  take-percent
+  "Returns the first k% items from the collection. The value of k is always rounded up.
+
+  Depending on use case, consider calculating percentile values and using the values to select
+  the top-k percent items."
+  [k-percent :- t/Num
+   xs :- (t/Coll a)] :- (t/Coll a)
+  (assert (and (<= 0 k-percent) (>= 100 k-percent)) "The provided percentage must be 0 >= k >= 100.")
+  (let [k (-> (count xs) (* (/ k-percent 100)) Math/ceil int)]
+    (take k xs)))

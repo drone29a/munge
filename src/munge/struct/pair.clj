@@ -59,4 +59,8 @@
     [x y]
   Pair
   (x [p] (:x p))
-  (y [p] (:y p)))
+  (y [p] (:y p))
+  Comparable
+  (compareTo [p other]
+    (compare [(:x p) (:y p)]
+             [(:x other) (:y other)])))
