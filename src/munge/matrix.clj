@@ -1,7 +1,9 @@
 (ns munge.matrix
   (:require [clojure.core.matrix :as mx]
+            [clojure.core.typed :as t]
             [schema.core :as s]
-            [munge.schema :refer [Mat Vec BinVec ProbVec]])
+            [munge.schema :refer [Mat Vec BinVec ProbVec]]
+            [munge.type :as mt])
   (:import [mikera.matrixx.impl SparseRowMatrix SparseColumnMatrix]
            [mikera.vectorz.impl SparseIndexedVector SparseHashedVector ASparseVector]
            [mikera.vectorz AVector]
@@ -177,6 +179,14 @@
     (proportional (mx/emap (comp #(if (> threshold %) 0 (Math/exp %))
                                  #(- % max-prob))
                            log-probs))))
+
+(t/defn normalize-min-max
+  [v :- mt/Vec] :- mt/Vec
+  (let [min-val (mx/emin v)
+        max-val (mx/emax v)]
+    (mx/emap #(/ (- % min-val)
+                 (- max-val min-val))
+             v)))
 
 (comment (s/defn set-row-non-zeros! :- Mat
            [m :- Mat
