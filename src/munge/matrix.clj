@@ -184,8 +184,10 @@
   [v :- mt/Vec] :- mt/Vec
   (let [min-val (mx/emin v)
         max-val (mx/emax v)]
-    (mx/emap #(/ (- % min-val)
-                 (- max-val min-val))
+    (mx/emap (fn [x] (if (= max-val min-val)
+                       0
+                       (/ (- x min-val)
+                          (- max-val min-val))))
              v)))
 
 (comment (s/defn set-row-non-zeros! :- Mat
