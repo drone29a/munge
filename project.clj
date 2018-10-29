@@ -10,7 +10,7 @@
                  [net.mikera/core.matrix "0.49.0"]
                  [net.mikera/vectorz-clj "0.42.0"]
                  [prismatic/schema "1.0.3"]
-                 [aysylu/loom "0.5.4"]
+                 [aysylu/loom "1.0.1"]
                  [stemmers "0.2.2"]
                  ;; TODO: Move to separate lib?
                  ;; [mkobos/lbfgsb-wrapper "1.1.3-SNAPSHOT" :native-prefix ""]
