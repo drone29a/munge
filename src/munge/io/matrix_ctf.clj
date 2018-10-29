@@ -1,9 +1,9 @@
 (ns munge.io.matrix-ctf
-  (require [clojure.string :refer [split]]
-           [clojure.java.io :as io]
-           [clojure.core.matrix :as mx]
-           [munge.core :refer :all]
-           [munge.matrix]))
+  (:require [clojure.string :refer [split]]
+            [clojure.java.io :as io]
+            [clojure.core.matrix :as mx]
+            [munge.core :refer :all]
+            [munge.matrix]))
 
 (defn read-matrix [lines]
   "Loads a matrix in coordinate text format."
